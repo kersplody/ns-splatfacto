@@ -64,7 +64,15 @@ class ExperimentConfig(InstantiateConfig):
     )
     """Dictionary of optimizer groups and their schedulers"""
     vis: Literal[
-        "viewer", "wandb", "tensorboard", "comet", "viewer+wandb", "viewer+tensorboard", "viewer+comet", "viewer_legacy"
+        "none",
+        "viewer",
+        "wandb",
+        "tensorboard",
+        "comet",
+        "viewer+wandb",
+        "viewer+tensorboard",
+        "viewer+comet",
+        "viewer_legacy",
     ] = "wandb"
     """Which visualizer to use."""
     data: Optional[Path] = None

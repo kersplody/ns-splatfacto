@@ -26,10 +26,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
-from typing import DefaultDict, Dict, List, Literal, Optional, Tuple, Type, cast
+from typing import Any, DefaultDict, Dict, List, Literal, Optional, Tuple, Type, cast
 
 import torch
-import viser
 from rich import box, style
 from rich.panel import Panel
 from rich.table import Table
@@ -44,8 +43,6 @@ from nerfstudio.utils.decorators import check_eval_enabled, check_main_thread, c
 from nerfstudio.utils.misc import step_check
 from nerfstudio.utils.rich_utils import CONSOLE
 from nerfstudio.utils.writer import EventName, TimeWriter
-from nerfstudio.viewer.viewer import Viewer as ViewerState
-from nerfstudio.viewer_legacy.server.viewer_state import ViewerLegacyState
 
 TRAIN_INTERATION_OUTPUT = Tuple[torch.Tensor, Dict[str, torch.Tensor], Dict[str, torch.Tensor]]
 TORCH_DEVICE = str
@@ -141,7 +138,7 @@ class Trainer:
         self.checkpoint_dir: Path = config.get_checkpoint_dir()
         CONSOLE.log(f"Saving checkpoints to: {self.checkpoint_dir}")
 
-        self.viewer_state = None
+        self.viewer_state: Optional[Any] = None
 
         # used to keep track of the current step
         self.step = 0
@@ -168,6 +165,8 @@ class Trainer:
         viewer_log_path = self.base_dir / self.config.viewer.relative_log_filename
         self.viewer_state, banner_messages = None, None
         if self.config.is_viewer_legacy_enabled() and self.local_rank == 0:
+            from nerfstudio.viewer_legacy.server.viewer_state import ViewerLegacyState
+
             datapath = self.config.data
             if datapath is None:
                 datapath = self.base_dir
@@ -181,6 +180,8 @@ class Trainer:
             )
             banner_messages = [f"Legacy viewer at: {self.viewer_state.viewer_url}"]
         if self.config.is_viewer_enabled() and self.local_rank == 0:
+            from nerfstudio.viewer.viewer import Viewer as ViewerState
+
             datapath = self.config.data
             if datapath is None:
                 datapath = self.base_dir
@@ -315,11 +316,10 @@ class Trainer:
         """Stop the trainer and stop all associated threads/processes (such as the viewer)."""
         self.stop_training = True  # tell the training loop to stop
         if self.viewer_state is not None:
-            # stop the viewer
-            # this condition excludes the case where `viser_server` is either `None` or an
-            # instance of `viewer_legacy`'s `ViserServer` instead of the upstream one.
-            if isinstance(self.viewer_state.viser_server, viser.ViserServer):
-                self.viewer_state.viser_server.stop()
+            viser_server = getattr(self.viewer_state, "viser_server", None)
+            stop = getattr(viser_server, "stop", None)
+            if callable(stop):
+                stop()
 
     def _after_train(self) -> None:
         """Function to run after training is complete"""

@@ -20,8 +20,8 @@ from dataclasses import dataclass
 from typing import Tuple, Union
 
 import torch
-import viser.transforms as vtf
 from jaxtyping import Float
+from scipy.spatial.transform import Rotation
 from torch import Tensor
 
 
@@ -112,7 +112,7 @@ class OrientedBox:
         pos: Tuple[float, float, float], rpy: Tuple[float, float, float], scale: Tuple[float, float, float]
     ):
         """Construct a box from position, rotation, and scale parameters."""
-        R = torch.tensor(vtf.SO3.from_rpy_radians(rpy[0], rpy[1], rpy[2]).as_matrix())
+        R = torch.tensor(Rotation.from_euler("xyz", rpy).as_matrix())
         T = torch.tensor(pos)
         S = torch.tensor(scale)
         return OrientedBox(R=R, T=T, S=S)
