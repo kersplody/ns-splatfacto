@@ -43,6 +43,7 @@ dev = [
 ]
 
 [project.scripts]
+ns-create-transforms = "nerfstudio.scripts.create_transforms:entrypoint"
 ns-splatfacto = "nerfstudio.scripts.splatfacto:entrypoint"
 
 [tool.setuptools.packages.find]
