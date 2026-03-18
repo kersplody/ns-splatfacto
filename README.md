@@ -1,361 +1,180 @@
-<p align="center">
-    <!-- community badges -->
-    <a href="https://discord.gg/uMbNqcraFc"><img src="https://dcbadge.vercel.app/api/server/uMbNqcraFc?style=plastic"/></a>
-    <!-- doc badges -->
-    <a href='https://docs.nerf.studio/'>
-        <img src='https://readthedocs.com/projects/plenoptix-nerfstudio/badge/?version=latest' alt='Documentation Status' /></a>
-    <!-- pi package badge -->
-    <a href="https://badge.fury.io/py/nerfstudio"><img src="https://badge.fury.io/py/nerfstudio.svg" alt="PyPI version"></a>
-    <!-- code check badges -->
-    <a href='https://github.com/nerfstudio-project/nerfstudio/actions/workflows/core_code_checks.yml'>
-        <img src='https://github.com/nerfstudio-project/nerfstudio/actions/workflows/core_code_checks.yml/badge.svg' alt='Test Status' /></a>
-    <!-- license badge -->
-    <a href="https://github.com/nerfstudio-project/nerfstudio/blob/master/LICENSE">
-        <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
-</p>
+# ns-splatfacto
 
-<p align="center">
-    <!-- pypi-strip -->
-    <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://docs.nerf.studio/_images/logo-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://docs.nerf.studio/_images/logo.png">
-    <!-- /pypi-strip -->
-    <img alt="nerfstudio" src="https://docs.nerf.studio/_images/logo.png" width="400">
-    <!-- pypi-strip -->
-    </picture>
-    <!-- /pypi-strip -->
-</p>
+`ns-splatfacto` is a narrowed fork of Nerfstudio for a specific workflow:
 
-<!-- Use this for pypi package (and disable above). Hacky workaround -->
-<!-- <p align="center">
-    <img alt="nerfstudio" src="https://docs.nerf.studio/_images/logo.png" width="400">
-</p> -->
+- train `splatfacto`
+- train `splatfacto-big`
+- evaluate trained runs
+- export gaussian splat PLYs
+- export camera poses from trained runs
+- create `transforms.json` from a COLMAP binary model
 
-<p align="center"> A collaboration friendly studio for NeRFs </p>
+This repository is no longer intended to be a general Nerfstudio distribution. Viewer, web UI, generic dataset processing, mesh export, and the broader multi-method CLI surface have been cut out of the supported scope.
 
-<p align="center">
-    <a href="https://docs.nerf.studio">
-        <img alt="documentation" src="https://user-images.githubusercontent.com/3310961/194022638-b591ce16-76e3-4ba6-9d70-3be252b36084.png" width="150"></a>
-    <a href="https://viewer.nerf.studio/">
-        <img alt="viewer" src="https://user-images.githubusercontent.com/3310961/194022636-a9efb85a-14fd-4002-8ed4-4ca434898b5a.png" width="150"></a>
-    <a href="https://colab.research.google.com/github/nerfstudio-project/nerfstudio/blob/main/colab/demo.ipynb">
-        <img alt="colab" src="https://raw.githubusercontent.com/nerfstudio-project/nerfstudio/main/docs/_static/imgs/readme_colab.png" width="150"></a>
-</p>
+The Python package namespace remains `nerfstudio` to keep upstream merges manageable. The installable package name is `ns-splatfacto`.
 
-<img src="https://user-images.githubusercontent.com/3310961/194017985-ade69503-9d68-46a2-b518-2db1a012f090.gif" width="52%"/> <img src="https://user-images.githubusercontent.com/3310961/194020648-7e5f380c-15ca-461d-8c1c-20beb586defe.gif" width="46%"/>
+## Scope
 
-- [Quickstart](#quickstart)
-- [Learn more](#learn-more)
-- [Supported Features](#supported-features)
+Supported executables:
 
-# About
+- `ns-splatfacto`
+- `ns-create-transforms`
 
-_It’s as simple as plug and play with nerfstudio!_
+Supported `ns-splatfacto` subcommands:
 
-Nerfstudio provides a simple API that allows for a simplified end-to-end process of creating, training, and testing NeRFs.
-The library supports a **more interpretable implementation of NeRFs by modularizing each component.**
-With more modular NeRFs, we hope to create a more user-friendly experience in exploring the technology.
+- `train splatfacto`
+- `train splatfacto-big`
+- `eval`
+- `export-gaussian-splat`
+- `export-camera-poses`
+- `export-colmap-transforms`
 
-This is a contributor-friendly repo with the goal of building a community where users can more easily build upon each other's contributions.
-Nerfstudio initially launched as an opensource project by Berkeley students in [KAIR lab](https://people.eecs.berkeley.edu/~kanazawa/index.html#kair) at [Berkeley AI Research (BAIR)](https://bair.berkeley.edu/) in October 2022 as a part of a research project ([paper](https://arxiv.org/abs/2302.04264)). It is currently developed by Berkeley students and community contributors.
+Supported `ns-create-transforms` workflow:
 
-We are committed to providing learning resources to help you understand the basics of (if you're just getting started), and keep up-to-date with (if you're a seasoned veteran) all things NeRF. As researchers, we know just how hard it is to get onboarded with this next-gen technology. So we're here to help with tutorials, documentation, and more!
+- read `cameras.bin` and `images.bin` from a COLMAP model directory
+- ignore `.txt` model files even if present
+- write `transforms.json`
 
-Have feature requests? Want to add your brand-spankin'-new NeRF model? Have a new dataset? **We welcome [contributions](https://docs.nerf.studio/reference/contributing.html)!** Please do not hesitate to reach out to the nerfstudio team with any questions via [Discord](https://discord.gg/uMbNqcraFc).
+Out of scope for this fork:
 
-Have feedback? We'd love for you to fill out our [Nerfstudio Feedback Form](https://forms.gle/sqN5phJN7LfQVwnP9) if you want to let us know who you are, why you are interested in Nerfstudio, or provide any feedback!
+- viewer and websocket services
+- `ns-install-cli`
+- generic `ns-train`, `ns-export`, `ns-render`, `ns-process-data`
+- mesh, TSDF, point cloud, and texture export
+- notebook and documentation tooling as package features
 
-We hope nerfstudio enables you to build faster :hammer: learn together :books: and contribute to our NeRF community :sparkling_heart:.
+## Install
 
-## Sponsors
-
-Sponsors of this work includes [Luma AI](https://lumalabs.ai/) and the [BAIR commons](https://bcommons.berkeley.edu/home).
-
-<p align="left">
-    <a href="https://lumalabs.ai/">
-        <!-- pypi-strip -->
-        <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/_static/imgs/luma_dark.png">
-        <source media="(prefers-color-scheme: light)" srcset="docs/_static/imgs/luma_light.png">
-        <!-- /pypi-strip -->
-        <img alt="Luma AI" src="docs/_static/imgs/luma_light.png" width="300">
-        <!-- pypi-strip -->
-        </picture>
-        <!-- /pypi-strip -->
-    </a>
-    <a href="https://bcommons.berkeley.edu/home">
-        <!-- pypi-strip -->
-        <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/_static/imgs/bair_dark.png">
-        <source media="(prefers-color-scheme: light)" srcset="docs/_static/imgs/bair_light.png">
-        <!-- /pypi-strip -->
-        <img alt="BAIR" src="docs/_static/imgs/bair_light.png" width="300">
-        <!-- pypi-strip -->
-        </picture>
-        <!-- /pypi-strip -->
-    </a>
-</p>
-
-# Quickstart
-
-The quickstart will help you get started with the default vanilla NeRF trained on the classic Blender Lego scene.
-For more complex changes (e.g., running with your own data/setting up a new NeRF graph), please refer to our [references](#learn-more).
-
-## 1. Installation: Setup the environment
-
-### Prerequisites
-
-You must have an NVIDIA video card with CUDA installed on the system. This library has been tested with version 11.8 of CUDA. You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html)
-
-### Create environment
-
-Nerfstudio requires `python >= 3.8`. We recommend using conda to manage dependencies. Make sure to install [Conda](https://docs.conda.io/miniconda.html) before proceeding.
+This package is intended to be installed like a standard Python console-script package.
 
 ```bash
-conda create --name nerfstudio -y python=3.8
-conda activate nerfstudio
-pip install --upgrade pip
-```
-
-### Dependencies
-
-Install PyTorch with CUDA (this repo has been tested with CUDA 11.7 and CUDA 11.8) and [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn).
-`cuda-toolkit` is required for building `tiny-cuda-nn`.
-
-For CUDA 11.8:
-
-```bash
-pip install torch==2.1.2+cu118 torchvision==0.16.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-
-conda install -c "nvidia/label/cuda-11.8.0" cuda-toolkit
-pip install ninja git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
-```
-
-See [Dependencies](https://github.com/nerfstudio-project/nerfstudio/blob/main/docs/quickstart/installation.md#dependencies)
-in the Installation documentation for more.
-
-### Installing nerfstudio
-
-Easy option:
-
-```bash
-pip install nerfstudio
-```
-
-**OR** if you want the latest and greatest:
-
-```bash
-git clone https://github.com/nerfstudio-project/nerfstudio.git
-cd nerfstudio
-pip install --upgrade pip setuptools
 pip install -e .
 ```
 
-**OR** if you want to skip all installation steps and directly start using nerfstudio, use the docker image:
+That installs:
 
-See [Installation](https://github.com/nerfstudio-project/nerfstudio/blob/main/docs/quickstart/installation.md) - **Use docker image**.
+- `ns-splatfacto`
+- `ns-create-transforms`
 
-## 2. Training your first model!
+No extra CLI bootstrap step is required.
 
-The following will train a _nerfacto_ model, our recommended model for real world scenes.
+## Runtime Assumptions
 
-```bash
-# Download some test data:
-ns-download-data nerfstudio --capture-name=poster
-# Train model
-ns-train nerfacto --data data/nerfstudio/poster
-```
+This fork assumes:
 
-If everything works, you should see training progress like the following:
+- a CUDA-capable PyTorch environment
+- `gsplat` is available and compatible with your Torch/CUDA stack
+- your own app or container handles data import and orchestration
 
-<p align="center">
-    <img width="800" alt="image" src="https://user-images.githubusercontent.com/3310961/202766069-cadfd34f-8833-4156-88b7-ad406d688fc0.png">
-</p>
+This repo does not try to manage the full old Nerfstudio environment anymore.
 
-Navigating to the link at the end of the terminal will load the webviewer. If you are running on a remote machine, you will need to port forward the websocket port (defaults to 7007).
+## Commands
 
-<p align="center">
-    <img width="800" alt="image" src="https://user-images.githubusercontent.com/3310961/202766653-586a0daa-466b-4140-a136-6b02f2ce2c54.png">
-</p>
+### Create `transforms.json` from COLMAP
 
-### Resume from checkpoint / visualize existing run
-
-It is possible to load a pretrained model by running
+Create `transforms.json` from a COLMAP binary model directory:
 
 ```bash
-ns-train nerfacto --data data/nerfstudio/poster --load-dir {outputs/.../nerfstudio_models}
+ns-create-transforms --model_dir=colmap/sparse/0 --output_file=transforms.json
 ```
 
-## Visualize existing run
+Defaults:
 
-Given a pretrained model checkpoint, you can start the viewer by running
+- `--model_dir=.` by default
+- `--output_file=.` by default
+- if `--output_file=.` or a directory path is given, output becomes `./transforms.json`
+
+Examples:
 
 ```bash
-ns-viewer --load-config {outputs/.../config.yml}
+ns-create-transforms
+ns-create-transforms --model_dir=colmap/sparse/0
+ns-create-transforms --model_dir=colmap/sparse/0 --output_file=transforms.json
 ```
 
-## 3. Exporting Results
+Notes:
 
-Once you have a NeRF model you can either render out a video or export a point cloud.
+- only `cameras.bin` and `images.bin` are used
+- `.txt` model files are ignored
+- file paths in frames default to `./images/...`
 
-### Render Video
+### Train
 
-First we must create a path for the camera to follow. This can be done in the viewer under the "RENDER" tab. Orient your 3D view to the location where you wish the video to start, then press "ADD CAMERA". This will set the first camera key frame. Continue to new viewpoints adding additional cameras to create the camera path. We provide other parameters to further refine your camera path. Once satisfied, press "RENDER" which will display a modal that contains the command needed to render the video. Kill the training job (or create a new terminal if you have lots of compute) and run the command to generate the video.
-
-Other video export options are available, learn more by running
+Train default splatfacto:
 
 ```bash
-ns-render --help
+ns-splatfacto train splatfacto --config.data /path/to/dataset
 ```
 
-### Generate Point Cloud
-
-While NeRF models are not designed to generate point clouds, it is still possible. Navigate to the "EXPORT" tab in the 3D viewer and select "POINT CLOUD". If the crop option is selected, everything in the yellow square will be exported into a point cloud. Modify the settings as desired then run the command at the bottom of the panel in your command line.
-
-Alternatively you can use the CLI without the viewer. Learn about the export options by running
+Train the larger variant:
 
 ```bash
-ns-export pointcloud --help
+ns-splatfacto train splatfacto-big --config.data /path/to/dataset
 ```
 
-## 4. Using Custom Data
+This slim CLI disables viewer usage and runs with `vis="none"`.
 
-Using an existing dataset is great, but likely you want to use your own data! We support various methods for using your own data. Before it can be used in nerfstudio, the camera location and orientations must be determined and then converted into our format using `ns-process-data`. We rely on external tools for this, instructions and information can be found in the documentation.
+### Evaluate
 
-| Data                                                                                          | Capture Device | Requirements                                                      | `ns-process-data` Speed |
-| --------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------- | ----------------------- |
-| 📷 [Images](https://docs.nerf.studio/quickstart/custom_dataset.html#images-or-video)          | Any            | [COLMAP](https://colmap.github.io/install.html)                   | 🐢                      |
-| 📹 [Video](https://docs.nerf.studio/quickstart/custom_dataset.html#images-or-video)           | Any            | [COLMAP](https://colmap.github.io/install.html)                   | 🐢                      |
-| 🌎 [360 Data](https://docs.nerf.studio/quickstart/custom_dataset.html#data-equirectangular)   | Any            | [COLMAP](https://colmap.github.io/install.html)                   | 🐢                      |
-| 📱 [Polycam](https://docs.nerf.studio/quickstart/custom_dataset.html#polycam-capture)         | IOS with LiDAR | [Polycam App](https://poly.cam/)                                  | 🐇                      |
-| 📱 [KIRI Engine](https://docs.nerf.studio/quickstart/custom_dataset.html#kiri-engine-capture) | IOS or Android | [KIRI Engine App](https://www.kiriengine.com/)                    | 🐇                      |
-| 📱 [Record3D](https://docs.nerf.studio/quickstart/custom_dataset.html#record3d-capture)       | IOS with LiDAR | [Record3D app](https://record3d.app/)                             | 🐇                      |
-| 📱 [Spectacular AI](https://docs.nerf.studio/quickstart/custom_dataset.html#spectacularai)    | IOS, OAK, [others](https://www.spectacularai.com/mapping#supported-devices) | [App](https://apps.apple.com/us/app/spectacular-rec/id6473188128) / [`sai-cli`](https://www.spectacularai.com/mapping) | 🐇 |
-| 🖥 [Metashape](https://docs.nerf.studio/quickstart/custom_dataset.html#metashape)             | Any            | [Metashape](https://www.agisoft.com/)                             | 🐇                      |
-| 🖥 [RealityCapture](https://docs.nerf.studio/quickstart/custom_dataset.html#realitycapture)   | Any            | [RealityCapture](https://www.capturingreality.com/realitycapture) | 🐇                      |
-| 🖥 [ODM](https://docs.nerf.studio/quickstart/custom_dataset.html#odm)                         | Any            | [ODM](https://github.com/OpenDroneMap/ODM)                        | 🐇                      |
-| 👓 [Aria](https://docs.nerf.studio/quickstart/custom_dataset.html#aria)                       | Aria glasses   | [Project Aria](https://projectaria.com/)                          | 🐇                      |
-| 🛠 [Custom](https://docs.nerf.studio/quickstart/data_conventions.html)                        | Any            | Camera Poses                                                      | 🐇                      |
-
-
-## 5. Advanced Options
-
-### Training models other than nerfacto
-
-We provide other models than nerfacto, for example if you want to train the original nerf model, use the following command
+Evaluate a trained run from a saved config:
 
 ```bash
-ns-train vanilla-nerf --data DATA_PATH
+ns-splatfacto eval \
+  --load-config outputs/<scene>/<method>/<timestamp>/config.yml \
+  --output-path eval.json
 ```
 
-For a full list of included models run `ns-train --help`.
-
-### Modify Configuration
-
-Each model contains many parameters that can be changed, too many to list here. Use the `--help` command to see the full list of configuration options.
+### Export Gaussian Splat PLY
 
 ```bash
-ns-train nerfacto --help
+ns-splatfacto export-gaussian-splat \
+  --load-config outputs/<scene>/<method>/<timestamp>/config.yml \
+  --output-dir exports/splat
 ```
 
-### Tensorboard / WandB / Viewer
+### Export Camera Poses From a Trained Run
 
-We support four different methods to track training progress, using the viewer[tensorboard](https://www.tensorflow.org/tensorboard), [Weights and Biases](https://wandb.ai/site), and ,[Comet](https://comet.com/?utm_source=nerf&utm_medium=referral&utm_content=github). You can specify which visualizer to use by appending `--vis {viewer, tensorboard, wandb, comet viewer+wandb, viewer+tensorboard, viewer+comet}` to the training command. Simultaneously utilizing the viewer alongside wandb or tensorboard may cause stuttering issues during evaluation steps. The viewer only works for methods that are fast (ie. nerfacto, instant-ngp), for slower methods like NeRF, use the other loggers.
-
-# Learn More
-
-And that's it for getting started with the basics of nerfstudio.
-
-If you're interested in learning more on how to create your own pipelines, develop with the viewer, run benchmarks, and more, please check out some of the quicklinks below or visit our [documentation](https://docs.nerf.studio/) directly.
-
-| Section                                                                                  | Description                                                                                        |
-| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [Documentation](https://docs.nerf.studio/)                                               | Full API documentation and tutorials                                                               |
-| [Viewer](https://viewer.nerf.studio/)                                                    | Home page for our web viewer                                                                       |
-| 🎒 **Educational**                                                                       |
-| [Model Descriptions](https://docs.nerf.studio/nerfology/methods/index.html)              | Description of all the models supported by nerfstudio and explanations of component parts.         |
-| [Component Descriptions](https://docs.nerf.studio/nerfology/model_components/index.html) | Interactive notebooks that explain notable/commonly used modules in various models.                |
-| 🏃 **Tutorials**                                                                         |
-| [Getting Started](https://docs.nerf.studio/quickstart/installation.html)                 | A more in-depth guide on how to get started with nerfstudio from installation to contributing.     |
-| [Using the Viewer](https://docs.nerf.studio/quickstart/viewer_quickstart.html)           | A quick demo video on how to navigate the viewer.                                                  |
-| [Using Record3D](https://www.youtube.com/watch?v=XwKq7qDQCQk)                            | Demo video on how to run nerfstudio without using COLMAP.                                          |
-| 💻 **For Developers**                                                                    |
-| [Creating pipelines](https://docs.nerf.studio/developer_guides/pipelines/index.html)     | Learn how to easily build new neural rendering pipelines by using and/or implementing new modules. |
-| [Creating datasets](https://docs.nerf.studio/quickstart/custom_dataset.html)             | Have a new dataset? Learn how to run it with nerfstudio.                                           |
-| [Contributing](https://docs.nerf.studio/reference/contributing.html)                     | Walk-through for how you can start contributing now.                                               |
-| 💖 **Community**                                                                         |
-| [Discord](https://discord.gg/uMbNqcraFc)                                                 | Join our community to discuss more. We would love to hear from you!                                |
-| [Twitter](https://twitter.com/nerfstudioteam)                                            | Follow us on Twitter @nerfstudioteam to see cool updates and announcements                         |
-| [Feedback Form](TODO)                                                                    | We welcome any feedback! This is our chance to learn what you all are using Nerfstudio for.        |
-
-# Supported Features
-
-We provide the following support structures to make life easier for getting started with NeRFs.
-
-**If you are looking for a feature that is not currently supported, please do not hesitate to contact the Nerfstudio Team on [Discord](https://discord.gg/uMbNqcraFc)!**
-
-- :mag_right: Web-based visualizer that allows you to:
-  - Visualize training in real-time + interact with the scene
-  - Create and render out scenes with custom camera trajectories
-  - View different output types
-  - And more!
-- :pencil2: Support for multiple logging interfaces (Tensorboard, Wandb), code profiling, and other built-in debugging tools
-- :chart_with_upwards_trend: Easy-to-use benchmarking scripts on the Blender dataset
-- :iphone: Full pipeline support (w/ Colmap, Polycam, or Record3D) for going from a video on your phone to a full 3D render.
-
-# Built On
-
-<a href="https://github.com/brentyi/tyro">
-<!-- pypi-strip -->
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://brentyi.github.io/tyro/_static/logo-dark.svg" />
-<!-- /pypi-strip -->
-    <img alt="tyro logo" src="https://brentyi.github.io/tyro/_static/logo-light.svg" width="150px" />
-<!-- pypi-strip -->
-</picture>
-<!-- /pypi-strip -->
-</a>
-
-- Easy-to-use config system
-- Developed by [Brent Yi](https://brentyi.com/)
-
-<a href="https://github.com/KAIR-BAIR/nerfacc">
-<!-- pypi-strip -->
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/3310961/199083722-881a2372-62c1-4255-8521-31a95a721851.png" />
-<!-- /pypi-strip -->
-    <img alt="tyro logo" src="https://user-images.githubusercontent.com/3310961/199084143-0d63eb40-3f35-48d2-a9d5-78d1d60b7d66.png" width="250px" />
-<!-- pypi-strip -->
-</picture>
-<!-- /pypi-strip -->
-</a>
-
-- Library for accelerating NeRF renders
-- Developed by [Ruilong Li](https://www.liruilong.cn/)
-
-# Citation
-
-You can find a paper writeup of the framework on [arXiv](https://arxiv.org/abs/2302.04264).
-
-If you use this library or find the documentation useful for your research, please consider citing:
-
-```
-@inproceedings{nerfstudio,
-	title        = {Nerfstudio: A Modular Framework for Neural Radiance Field Development},
-	author       = {
-		Tancik, Matthew and Weber, Ethan and Ng, Evonne and Li, Ruilong and Yi, Brent
-		and Kerr, Justin and Wang, Terrance and Kristoffersen, Alexander and Austin,
-		Jake and Salahi, Kamyar and Ahuja, Abhik and McAllister, David and Kanazawa,
-		Angjoo
-	},
-	year         = 2023,
-	booktitle    = {ACM SIGGRAPH 2023 Conference Proceedings},
-	series       = {SIGGRAPH '23}
-}
+```bash
+ns-splatfacto export-camera-poses \
+  --load-config outputs/<scene>/<method>/<timestamp>/config.yml \
+  --output-dir exports/cameras
 ```
 
-# Contributors
+### Export COLMAP Transforms Through `ns-splatfacto`
 
-<a href="https://github.com/nerfstudio-project/nerfstudio/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=nerfstudio-project/nerfstudio" />
-</a>
+If you prefer to keep everything under one executable:
+
+```bash
+ns-splatfacto export-colmap-transforms \
+  --model-dir colmap/sparse/0 \
+  --output-path transforms.json
+```
+
+## Package Layout
+
+Important naming distinction:
+
+- installable distribution: `ns-splatfacto`
+- Python import namespace: `nerfstudio`
+
+This is intentional. Keeping the `nerfstudio` module tree reduces merge pain if changes need to be pulled from upstream later.
+
+## Development
+
+Install development extras:
+
+```bash
+pip install -e .[dev]
+```
+
+Basic checks:
+
+```bash
+python3 -m py_compile nerfstudio/scripts/splatfacto.py nerfstudio/scripts/create_transforms.py
+```
+
+## Notes
+
+- The repository still contains legacy code under the `nerfstudio` tree that is no longer part of the supported runtime surface.
+- The package manifest has been reduced to the dependencies required for the splatfacto-only workflow.
+- If you move data import fully into your own app, keep this repo focused on training/eval/export rather than rebuilding the old generic CLI surface.
