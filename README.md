@@ -7,7 +7,6 @@
 - evaluate trained runs
 - export gaussian splat PLYs
 - export camera poses from trained runs
-- create `transforms.json` from a COLMAP binary model
 
 This repository is no longer intended to be a general Nerfstudio distribution. Viewer, web UI, generic dataset processing, mesh export, and the broader multi-method CLI surface have been cut out of the supported scope.
 
@@ -18,7 +17,6 @@ The Python package namespace remains `nerfstudio` to keep upstream merges manage
 Supported executables:
 
 - `ns-splatfacto`
-- `ns-create-transforms`
 
 Supported `ns-splatfacto` subcommands:
 
@@ -27,13 +25,6 @@ Supported `ns-splatfacto` subcommands:
 - `eval`
 - `export-gaussian-splat`
 - `export-camera-poses`
-- `export-colmap-transforms`
-
-Supported `ns-create-transforms` workflow:
-
-- read `cameras.bin` and `images.bin` from a COLMAP model directory
-- ignore `.txt` model files even if present
-- write `transforms.json`
 
 Out of scope for this fork:
 
@@ -54,9 +45,9 @@ pip install -e .
 That installs:
 
 - `ns-splatfacto`
-- `ns-create-transforms`
 
 No extra CLI bootstrap step is required.
+Converter CLIs are now maintained separately under the root-level `colmap2transforms` package while it still lives in this repo.
 
 ## Runtime Assumptions
 
@@ -69,34 +60,6 @@ This fork assumes:
 This repo does not try to manage the full old Nerfstudio environment anymore.
 
 ## Commands
-
-### Create `transforms.json` from COLMAP
-
-Create `transforms.json` from a COLMAP binary model directory:
-
-```bash
-ns-create-transforms --model_dir=colmap/sparse/0 --output_file=transforms.json
-```
-
-Defaults:
-
-- `--model_dir=.` by default
-- `--output_file=.` by default
-- if `--output_file=.` or a directory path is given, output becomes `./transforms.json`
-
-Examples:
-
-```bash
-ns-create-transforms
-ns-create-transforms --model_dir=colmap/sparse/0
-ns-create-transforms --model_dir=colmap/sparse/0 --output_file=transforms.json
-```
-
-Notes:
-
-- only `cameras.bin` and `images.bin` are used
-- `.txt` model files are ignored
-- file paths in frames default to `./images/...`
 
 ### Train
 
@@ -140,16 +103,6 @@ ns-splatfacto export-camera-poses \
   --output-dir exports/cameras
 ```
 
-### Export COLMAP Transforms Through `ns-splatfacto`
-
-If you prefer to keep everything under one executable:
-
-```bash
-ns-splatfacto export-colmap-transforms \
-  --model-dir colmap/sparse/0 \
-  --output-path transforms.json
-```
-
 ## Package Layout
 
 Important naming distinction:
@@ -170,11 +123,12 @@ pip install -e .[dev]
 Basic checks:
 
 ```bash
-python3 -m py_compile nerfstudio/scripts/splatfacto.py nerfstudio/scripts/create_transforms.py
+python3 -m py_compile nerfstudio/scripts/splatfacto.py colmap2transforms/colmap2transforms.py colmap2transforms/transforms2colmap.py
 ```
 
 ## Notes
 
+- COLMAP conversion now lives under the separate `colmap2transforms` package in this repo and is no longer part of the `ns-splatfacto` runtime surface.
 - The repository still contains legacy code under the `nerfstudio` tree that is no longer part of the supported runtime surface.
 - The package manifest has been reduced to the dependencies required for the splatfacto-only workflow.
 - If you move data import fully into your own app, keep this repo focused on training/eval/export rather than rebuilding the old generic CLI surface.

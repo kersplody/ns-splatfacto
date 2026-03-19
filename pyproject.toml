@@ -44,11 +44,12 @@ dev = [
 ]
 
 [project.scripts]
-ns-create-transforms = "nerfstudio.scripts.create_transforms:entrypoint"
+colmap2transforms = "colmap2transforms.colmap2transforms:entrypoint"
 ns-splatfacto = "nerfstudio.scripts.splatfacto:entrypoint"
+transforms2colmap = "colmap2transforms.transforms2colmap:entrypoint"
 
 [tool.setuptools.packages.find]
-include = ["nerfstudio*"]
+include = ["colmap2transforms*", "nerfstudio*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.cu", "*.json", "py.typed"]
@@ -60,7 +61,7 @@ testpaths = [
 ]
 
 [tool.pyright]
-include = ["nerfstudio"]
+include = ["colmap2transforms", "nerfstudio"]
 exclude = ["**/node_modules",
     "**/__pycache__",
 ]
@@ -106,5 +107,5 @@ lint.ignore = [
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
-known-first-party = ["nerfstudio"]
+known-first-party = ["colmap2transforms", "nerfstudio"]
 split-on-trailing-comma = false

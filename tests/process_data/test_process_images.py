@@ -2,6 +2,7 @@
 Process images test
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -9,12 +10,16 @@ import numpy as np
 import torch
 from PIL import Image
 
+from colmap2transforms.colmap2transforms import create_transforms_data
+from colmap2transforms.transforms2colmap import create_colmap_data
 from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig
 from nerfstudio.data.utils.colmap_parsing_utils import (
     Camera,
     Image as ColmapImage,
     Point3D,
     qvec2rotmat,
+    read_cameras_binary,
+    read_images_binary,
     write_cameras_binary,
     write_images_binary,
     write_points3D_binary,
@@ -209,3 +214,53 @@ def test_process_images_recursively_skip_colmap(tmp_path: Path):
     )
     dataparser_poses = np.linalg.inv(dataparser_poses)
     np.testing.assert_allclose(original_poses, dataparser_poses, rtol=0, atol=1e-5)
+
+
+def test_create_colmap_from_transforms_roundtrip(tmp_path: Path):
+    width = 100
+    height = 150
+    original_model_path = tmp_path / "sparse" / "0"
+    original_model_path.mkdir(exist_ok=True, parents=True)
+
+    cameras = {1: Camera(1, "OPENCV", width, height, [110, 112, 50, 75, 0.1, -0.01, 0.001, -0.002])}
+    write_cameras_binary(cameras, original_model_path / "cameras.bin")
+
+    qvecs = random_quaternion(3)
+    tvecs = np.random.uniform(size=(3, 3))
+    images = {
+        idx + 1: ColmapImage(
+            idx + 1,
+            qvecs[idx],
+            tvecs[idx],
+            1,
+            f"image_{idx}.png",
+            np.empty((0, 2), dtype=np.float64),
+            np.empty((0,), dtype=np.int64),
+        )
+        for idx in range(3)
+    }
+    write_images_binary(images, original_model_path / "images.bin")
+
+    transforms = create_transforms_data(model_dir=original_model_path)
+    transforms_path = tmp_path / "transforms.json"
+    transforms_path.write_text(json.dumps(transforms, indent=4), encoding="utf-8")
+
+    roundtrip_model_path = tmp_path / "roundtrip" / "0"
+    create_colmap_data(transforms_path=transforms_path, output_dir=roundtrip_model_path)
+
+    roundtrip_cameras = read_cameras_binary(roundtrip_model_path / "cameras.bin")
+    roundtrip_images = read_images_binary(roundtrip_model_path / "images.bin")
+
+    assert len(roundtrip_cameras) == 1
+    np.testing.assert_allclose(roundtrip_cameras[1].params, cameras[1].params, rtol=0, atol=1e-6)
+    assert roundtrip_cameras[1].model == cameras[1].model
+    assert roundtrip_cameras[1].width == cameras[1].width
+    assert roundtrip_cameras[1].height == cameras[1].height
+
+    for image_id, original_image in images.items():
+        roundtrip_image = roundtrip_images[image_id]
+        np.testing.assert_allclose(
+            qvec2rotmat(roundtrip_image.qvec), qvec2rotmat(original_image.qvec), rtol=0, atol=1e-6
+        )
+        np.testing.assert_allclose(roundtrip_image.tvec, original_image.tvec, rtol=0, atol=1e-6)
+        assert roundtrip_image.name == original_image.name

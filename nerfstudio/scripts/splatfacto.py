@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import random
 import socket
@@ -33,7 +32,6 @@ from nerfstudio.engine.schedulers import ExponentialDecaySchedulerConfig
 from nerfstudio.engine.trainer import TrainerConfig
 from nerfstudio.models.splatfacto import SplatfactoModel, SplatfactoModelConfig
 from nerfstudio.pipelines.base_pipeline import Pipeline, VanillaPipeline, VanillaPipelineConfig
-from nerfstudio.scripts.create_transforms import create_transforms_data
 from nerfstudio.utils import comms, profiler
 from nerfstudio.utils.available_devices import get_available_devices
 from nerfstudio.utils.rich_utils import CONSOLE
@@ -479,33 +477,12 @@ class ExportGaussianSplat:
         CONSOLE.print(f"[bold green]:white_check_mark: Saved splat PLY to {filename}")
 
 
-@dataclass
-class ExportColmapTransforms:
-    model_dir: Path
-    output_path: Path = Path("transforms.json")
-    keep_original_world_coordinate: bool = False
-    use_single_camera_mode: bool = True
-    image_dir: str = "./images"
-
-    def main(self) -> None:
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        transforms = create_transforms_data(
-            model_dir=self.model_dir,
-            image_dir=self.image_dir,
-            keep_original_world_coordinate=self.keep_original_world_coordinate,
-            use_single_camera_mode=self.use_single_camera_mode,
-        )
-        self.output_path.write_text(json.dumps(transforms, indent=4), encoding="utf-8")
-        CONSOLE.print(f"[bold green]:white_check_mark: Saved transforms to {self.output_path}")
-
-
 Commands = tyro.conf.FlagConversionOff[
     Union[
         Annotated[TrainSplatfacto, tyro.conf.subcommand(name="train")],
         Annotated[EvalSplatfacto, tyro.conf.subcommand(name="eval")],
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="export-gaussian-splat")],
         Annotated[ExportCameraPoses, tyro.conf.subcommand(name="export-camera-poses")],
-        Annotated[ExportColmapTransforms, tyro.conf.subcommand(name="export-colmap-transforms")],
     ]
 ]
 
