@@ -82,6 +82,7 @@ This slim CLI disables viewer usage and runs with `vis="none"`.
 Train, then immediately run final eval and gaussian-splat export in one process without reloading the dataset:
 
 ```bash
+cd nerfstudio-project-directory   # contains at least transforms.json and images
 ns-splatfacto train-eval-export \
   --output-dir splats \
   --run-name oilfacility1.xl \
