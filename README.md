@@ -87,7 +87,7 @@ ns-splatfacto train-eval-export \
   --output-dir splats \
   --run-name oilfacility1.xl \
   splatfacto-big \
-  --config.output-dir outputs \
+  --config.output-dir modelOutput \
   --config.pipeline.model.camera-optimizer.mode off \
   nerfstudio-data \
   --data . \
@@ -96,7 +96,7 @@ ns-splatfacto train-eval-export \
   --auto-scale-poses False
 ```
 
-That writes `oilfacility1.xl.ply` and `oilfacility1.xl.eval.json` into `splats/`.
+That writes `oilfacility1.xl.ply` and `oilfacility1.xl.eval.json` into `splats/`. Model checkpoint and logs in `modelOutput/`.
 
 This combined command currently supports only a single-process, one-GPU run.
 
