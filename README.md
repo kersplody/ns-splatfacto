@@ -82,11 +82,17 @@ This slim CLI disables viewer usage and runs with `vis="none"`.
 Train, then immediately run final eval and gaussian-splat export in one process without reloading the dataset:
 
 ```bash
-ns-splatfacto train-eval-export splatfacto-big \
+ns-splatfacto train-eval-export \
   --output-dir splats \
   --run-name oilfacility1.xl \
+  splatfacto-big \
+  --config.output-dir outputs \
+  --config.pipeline.model.camera-optimizer.mode off \
   nerfstudio-data \
-  --data /path/to/dataset
+  --data . \
+  --orientation-method none \
+  --center-method none \
+  --auto-scale-poses False
 ```
 
 That writes `oilfacility1.xl.ply` and `oilfacility1.xl.eval.json` into `splats/`.
