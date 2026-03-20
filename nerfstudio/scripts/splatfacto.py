@@ -234,6 +234,38 @@ def run_train(config: TrainerConfig) -> None:
     )
 
 
+def _prepare_train_config(config: TrainerConfig) -> TrainerConfig:
+    available_device_types = get_available_devices()
+    if config.machine.device_type not in available_device_types:
+        raise RuntimeError(
+            f"Specified device type '{config.machine.device_type}' is not available. "
+            f"Available device types: {available_device_types}."
+        )
+
+    if config.data:
+        config.pipeline.datamanager.data = config.data
+
+    if config.load_config:
+        config = yaml.load(config.load_config.read_text(), Loader=yaml.Loader)
+
+    config.set_timestamp()
+    config.print_to_terminal()
+    config.save_config()
+    return config
+
+
+def run_train_single_process(config: TrainerConfig) -> Any:
+    config = _prepare_train_config(config)
+    _set_random_seed(config.machine.seed)
+    trainer = config.setup(local_rank=0, world_size=1)
+    trainer.setup()
+    try:
+        trainer.train()
+    finally:
+        profiler.flush_profiler(config.logging)
+    return trainer
+
+
 def eval_setup_splatfacto(
     config_path: Path,
     test_mode: Literal["test", "val", "inference"] = "test",
@@ -308,6 +340,122 @@ def collect_camera_poses(pipeline: VanillaPipeline) -> Tuple[List[Dict[str, Any]
     )
 
 
+def write_eval_results(
+    config: TrainerConfig,
+    checkpoint_path: Path,
+    pipeline: Pipeline,
+    output_path: Path,
+    render_output_path: Optional[Path] = None,
+) -> None:
+    assert output_path.suffix == ".json"
+    if render_output_path is not None:
+        render_output_path.mkdir(parents=True, exist_ok=True)
+    metrics_dict = pipeline.get_average_eval_image_metrics(output_path=render_output_path, get_std=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    benchmark_info = {
+        "experiment_name": config.experiment_name,
+        "method_name": config.method_name,
+        "checkpoint": str(checkpoint_path),
+        "results": metrics_dict,
+    }
+    output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
+    CONSOLE.print(f"Saved results to: {output_path}")
+
+
+def export_gaussian_splat_from_pipeline(
+    pipeline: Pipeline,
+    output_dir: Path,
+    output_filename: str = "splat.ply",
+    obb_center: Optional[Tuple[float, float, float]] = None,
+    obb_rotation: Optional[Tuple[float, float, float]] = None,
+    obb_scale: Optional[Tuple[float, float, float]] = None,
+    ply_color_mode: Literal["sh_coeffs", "rgb"] = "sh_coeffs",
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    assert isinstance(pipeline.model, SplatfactoModel)
+    model = cast(SplatfactoModel, pipeline.model)
+
+    filename = output_dir / output_filename
+    map_to_tensors: OrderedDict[str, np.ndarray] = OrderedDict()
+
+    with torch.no_grad():
+        positions = model.means.cpu().numpy()
+        count = positions.shape[0]
+        n = count
+        map_to_tensors["x"] = positions[:, 0]
+        map_to_tensors["y"] = positions[:, 1]
+        map_to_tensors["z"] = positions[:, 2]
+        map_to_tensors["nx"] = np.zeros(n, dtype=np.float32)
+        map_to_tensors["ny"] = np.zeros(n, dtype=np.float32)
+        map_to_tensors["nz"] = np.zeros(n, dtype=np.float32)
+
+        if ply_color_mode == "rgb":
+            colors = torch.clamp(model.colors.clone(), 0.0, 1.0).data.cpu().numpy()
+            colors = (colors * 255).astype(np.uint8)
+            map_to_tensors["red"] = colors[:, 0]
+            map_to_tensors["green"] = colors[:, 1]
+            map_to_tensors["blue"] = colors[:, 2]
+        else:
+            shs_0 = model.shs_0.contiguous().cpu().numpy()
+            for i in range(shs_0.shape[1]):
+                map_to_tensors[f"f_dc_{i}"] = shs_0[:, i, None]
+
+        if model.config.sh_degree > 0 and ply_color_mode == "sh_coeffs":
+            shs_rest = model.shs_rest.transpose(1, 2).contiguous().cpu().numpy()
+            shs_rest = shs_rest.reshape((n, -1))
+            for i in range(shs_rest.shape[-1]):
+                map_to_tensors[f"f_rest_{i}"] = shs_rest[:, i, None]
+
+        map_to_tensors["opacity"] = model.opacities.data.cpu().numpy()
+
+        scales = model.scales.data.cpu().numpy()
+        for i in range(3):
+            map_to_tensors[f"scale_{i}"] = scales[:, i, None]
+
+        quats = model.quats.data.cpu().numpy()
+        for i in range(4):
+            map_to_tensors[f"rot_{i}"] = quats[:, i, None]
+
+        if obb_center is not None and obb_rotation is not None and obb_scale is not None:
+            crop_obb = OrientedBox.from_params(obb_center, obb_rotation, obb_scale)
+            mask = crop_obb.within(torch.from_numpy(positions)).numpy()
+            for key in list(map_to_tensors.keys()):
+                map_to_tensors[key] = map_to_tensors[key][mask]
+            count = map_to_tensors["x"].shape[0]
+            n = count
+
+    select = np.ones(n, dtype=bool)
+    for tensor in map_to_tensors.values():
+        select = np.logical_and(select, np.isfinite(tensor).all(axis=-1))
+
+    low_opacity_gaussians = map_to_tensors["opacity"].squeeze(axis=-1) < -5.5373
+    select[low_opacity_gaussians] = 0
+
+    if np.sum(select) < n:
+        for key in list(map_to_tensors.keys()):
+            map_to_tensors[key] = map_to_tensors[key][select]
+        count = int(np.sum(select))
+
+    ExportGaussianSplat.write_ply(str(filename), count, map_to_tensors)
+    CONSOLE.print(f"[bold green]:white_check_mark: Saved splat PLY to {filename}")
+
+
+def _resolve_train_eval_export_outputs(
+    output_dir: Optional[Path],
+    run_name: Optional[str],
+    eval_output_path: Path,
+    export_output_dir: Path,
+    output_filename: str,
+) -> Tuple[Path, Path]:
+    if output_dir is None and run_name is None:
+        return eval_output_path, export_output_dir / output_filename
+
+    if output_dir is None or run_name is None:
+        raise ValueError("--output-dir and --run-name must be provided together.")
+
+    return output_dir / f"{run_name}.eval.json", output_dir / f"{run_name}.ply"
+
+
 SplatfactoTrainConfig = tyro.extras.subcommand_type_from_defaults(
     {
         "splatfacto": build_splatfacto_config("splatfacto"),
@@ -328,6 +476,55 @@ class TrainSplatfacto:
 
 
 @dataclass
+class TrainEvalExportSplatfacto:
+    config: SplatfactoTrainConfig = field(default_factory=lambda: build_splatfacto_config("splatfacto"))
+    output_dir: Optional[Path] = None
+    run_name: Optional[str] = None
+    eval_output_path: Path = Path("eval.json")
+    render_output_path: Optional[Path] = None
+    export_output_dir: Path = Path("exports/splat")
+    output_filename: str = "splat.ply"
+    obb_center: Optional[Tuple[float, float, float]] = None
+    obb_rotation: Optional[Tuple[float, float, float]] = None
+    obb_scale: Optional[Tuple[float, float, float]] = None
+    ply_color_mode: Literal["sh_coeffs", "rgb"] = "sh_coeffs"
+
+    def main(self) -> None:
+        config = cast(TrainerConfig, self.config)
+        config.vis = "none"
+        if config.machine.num_devices != 1 or config.machine.num_machines != 1:
+            raise ValueError("train-eval-export only supports a single-process, one-GPU run.")
+
+        trainer = run_train_single_process(config)
+        checkpoint_path = trainer.checkpoint_dir / f"step-{trainer.step:09d}.ckpt"
+        pipeline = trainer.pipeline
+        eval_output_path, export_output_path = _resolve_train_eval_export_outputs(
+            self.output_dir,
+            self.run_name,
+            self.eval_output_path,
+            self.export_output_dir,
+            self.output_filename,
+        )
+
+        write_eval_results(
+            trainer.config,
+            checkpoint_path,
+            pipeline,
+            output_path=eval_output_path,
+            render_output_path=self.render_output_path,
+        )
+        export_gaussian_splat_from_pipeline(
+            pipeline,
+            output_dir=export_output_path.parent,
+            output_filename=export_output_path.name,
+            obb_center=self.obb_center,
+            obb_rotation=self.obb_rotation,
+            obb_scale=self.obb_scale,
+            ply_color_mode=self.ply_color_mode,
+        )
+
+
+@dataclass
 class EvalSplatfacto:
     load_config: Path
     output_path: Path = Path("output.json")
@@ -335,19 +532,7 @@ class EvalSplatfacto:
 
     def main(self) -> None:
         config, pipeline, checkpoint_path, _ = eval_setup_splatfacto(self.load_config)
-        assert self.output_path.suffix == ".json"
-        if self.render_output_path is not None:
-            self.render_output_path.mkdir(parents=True, exist_ok=True)
-        metrics_dict = pipeline.get_average_eval_image_metrics(output_path=self.render_output_path, get_std=True)
-        self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        benchmark_info = {
-            "experiment_name": config.experiment_name,
-            "method_name": config.method_name,
-            "checkpoint": str(checkpoint_path),
-            "results": metrics_dict,
-        }
-        self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
-        CONSOLE.print(f"Saved results to: {self.output_path}")
+        write_eval_results(config, checkpoint_path, pipeline, self.output_path, self.render_output_path)
 
 
 @dataclass
@@ -407,79 +592,22 @@ class ExportGaussianSplat:
                         ply_file.write(value.tobytes())
 
     def main(self) -> None:
-        self.output_dir.mkdir(parents=True, exist_ok=True)
         _, pipeline, _, _ = eval_setup_splatfacto(self.load_config, test_mode="inference")
-        assert isinstance(pipeline.model, SplatfactoModel)
-        model = cast(SplatfactoModel, pipeline.model)
-
-        filename = self.output_dir / self.output_filename
-        map_to_tensors: OrderedDict[str, np.ndarray] = OrderedDict()
-
-        with torch.no_grad():
-            positions = model.means.cpu().numpy()
-            count = positions.shape[0]
-            n = count
-            map_to_tensors["x"] = positions[:, 0]
-            map_to_tensors["y"] = positions[:, 1]
-            map_to_tensors["z"] = positions[:, 2]
-            map_to_tensors["nx"] = np.zeros(n, dtype=np.float32)
-            map_to_tensors["ny"] = np.zeros(n, dtype=np.float32)
-            map_to_tensors["nz"] = np.zeros(n, dtype=np.float32)
-
-            if self.ply_color_mode == "rgb":
-                colors = torch.clamp(model.colors.clone(), 0.0, 1.0).data.cpu().numpy()
-                colors = (colors * 255).astype(np.uint8)
-                map_to_tensors["red"] = colors[:, 0]
-                map_to_tensors["green"] = colors[:, 1]
-                map_to_tensors["blue"] = colors[:, 2]
-            else:
-                shs_0 = model.shs_0.contiguous().cpu().numpy()
-                for i in range(shs_0.shape[1]):
-                    map_to_tensors[f"f_dc_{i}"] = shs_0[:, i, None]
-
-            if model.config.sh_degree > 0 and self.ply_color_mode == "sh_coeffs":
-                shs_rest = model.shs_rest.transpose(1, 2).contiguous().cpu().numpy()
-                shs_rest = shs_rest.reshape((n, -1))
-                for i in range(shs_rest.shape[-1]):
-                    map_to_tensors[f"f_rest_{i}"] = shs_rest[:, i, None]
-
-            map_to_tensors["opacity"] = model.opacities.data.cpu().numpy()
-
-            scales = model.scales.data.cpu().numpy()
-            for i in range(3):
-                map_to_tensors[f"scale_{i}"] = scales[:, i, None]
-
-            quats = model.quats.data.cpu().numpy()
-            for i in range(4):
-                map_to_tensors[f"rot_{i}"] = quats[:, i, None]
-
-            if self.obb_center is not None and self.obb_rotation is not None and self.obb_scale is not None:
-                crop_obb = OrientedBox.from_params(self.obb_center, self.obb_rotation, self.obb_scale)
-                mask = crop_obb.within(torch.from_numpy(positions)).numpy()
-                for key in list(map_to_tensors.keys()):
-                    map_to_tensors[key] = map_to_tensors[key][mask]
-                count = map_to_tensors["x"].shape[0]
-                n = count
-
-        select = np.ones(n, dtype=bool)
-        for tensor in map_to_tensors.values():
-            select = np.logical_and(select, np.isfinite(tensor).all(axis=-1))
-
-        low_opacity_gaussians = map_to_tensors["opacity"].squeeze(axis=-1) < -5.5373
-        select[low_opacity_gaussians] = 0
-
-        if np.sum(select) < n:
-            for key in list(map_to_tensors.keys()):
-                map_to_tensors[key] = map_to_tensors[key][select]
-            count = int(np.sum(select))
-
-        self.write_ply(str(filename), count, map_to_tensors)
-        CONSOLE.print(f"[bold green]:white_check_mark: Saved splat PLY to {filename}")
+        export_gaussian_splat_from_pipeline(
+            pipeline,
+            output_dir=self.output_dir,
+            output_filename=self.output_filename,
+            obb_center=self.obb_center,
+            obb_rotation=self.obb_rotation,
+            obb_scale=self.obb_scale,
+            ply_color_mode=self.ply_color_mode,
+        )
 
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
         Annotated[TrainSplatfacto, tyro.conf.subcommand(name="train")],
+        Annotated[TrainEvalExportSplatfacto, tyro.conf.subcommand(name="train-eval-export")],
         Annotated[EvalSplatfacto, tyro.conf.subcommand(name="eval")],
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="export-gaussian-splat")],
         Annotated[ExportCameraPoses, tyro.conf.subcommand(name="export-camera-poses")],

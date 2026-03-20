@@ -22,6 +22,8 @@ Supported `ns-splatfacto` subcommands:
 
 - `train splatfacto`
 - `train splatfacto-big`
+- `train-eval-export splatfacto`
+- `train-eval-export splatfacto-big`
 - `eval`
 - `export-gaussian-splat`
 - `export-camera-poses`
@@ -76,6 +78,20 @@ ns-splatfacto train splatfacto-big --config.data /path/to/dataset
 ```
 
 This slim CLI disables viewer usage and runs with `vis="none"`.
+
+Train, then immediately run final eval and gaussian-splat export in one process without reloading the dataset:
+
+```bash
+ns-splatfacto train-eval-export splatfacto-big \
+  --output-dir splats \
+  --run-name oilfacility1.xl \
+  nerfstudio-data \
+  --data /path/to/dataset
+```
+
+That writes `oilfacility1.xl.ply` and `oilfacility1.xl.eval.json` into `splats/`.
+
+This combined command currently supports only a single-process, one-GPU run.
 
 ### Evaluate
 
